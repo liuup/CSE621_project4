@@ -3,14 +3,15 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from src.classification.classical import run_classical_baseline
+from src.classification.classical import run_classical_baselines
 from src.classification.decoder_prompt import run_decoder_few_shot, run_decoder_zero_shot
 from src.classification.encoder_head import TrainingConfig, run_encoder_frozen_head
 from src.classification.encoder_zeroshot import run_encoder_zero_shot
 from src.clustering.run_clustering import run_clustering_experiments
 from src.config import RuntimeConfig
 from src.data import load_bbc_dataset
-from src.plots import plot_classification_results, plot_clustering_results
+from src.plots import plot_classification_results, plot_clustering_results, plot_runtime_results
+from src.reporting import generate_classification_confusion_matrices
 from src.runtime import initialize_runtime
 from src.utils import ensure_dir, save_dataframe, set_seed
 
@@ -27,6 +28,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--limit-train", type=int, default=None, help="Optional cap on train samples.")
     parser.add_argument("--limit-test", type=int, default=None, help="Optional cap on test samples.")
     parser.add_argument("--encoder-model", default=defaults.encoder_model_name)
+    parser.add_argument("--encoder-head-model", default=None)
+    parser.add_argument("--encoder-zeroshot-model", default=None)
     parser.add_argument("--decoder-model", default=defaults.decoder_model_name)
     parser.add_argument("--encoder-batch-size", type=int, default=defaults.encoder_batch_size)
     parser.add_argument("--decoder-batch-size", type=int, default=defaults.decoder_batch_size)
@@ -49,6 +52,8 @@ def parse_args() -> argparse.Namespace:
 def run_classification(args: argparse.Namespace, bundle) -> None:
     classification_dir = ensure_dir(Path(args.output_dir) / "classification")
     results: list[dict] = []
+    encoder_head_model = args.encoder_head_model or args.encoder_model
+    encoder_zeroshot_model = args.encoder_zeroshot_model or args.encoder_model
 
     training_config = TrainingConfig(
         batch_size=args.encoder_batch_size,
@@ -63,7 +68,7 @@ def run_classification(args: argparse.Namespace, bundle) -> None:
         run_encoder_frozen_head(
             bundle,
             classification_dir,
-            args.encoder_model,
+            encoder_head_model,
             training_config,
             require_cuda=args.require_cuda,
         )
@@ -72,7 +77,7 @@ def run_classification(args: argparse.Namespace, bundle) -> None:
         run_encoder_zero_shot(
             bundle,
             classification_dir,
-            args.encoder_model,
+            encoder_zeroshot_model,
             args.encoder_batch_size,
             args.encoder_max_length,
             require_cuda=args.require_cuda,
@@ -104,10 +109,12 @@ def run_classification(args: argparse.Namespace, bundle) -> None:
             prefer_bf16=args.prefer_bf16,
         )
     )
-    results.append(run_classical_baseline(bundle, classification_dir, args.tfidf_max_features))
+    results.extend(run_classical_baselines(bundle, classification_dir, args.tfidf_max_features))
 
     df = save_dataframe(results, classification_dir / "classification_summary.csv")
     plot_classification_results(df, classification_dir / "classification_metrics.png")
+    plot_runtime_results(df, classification_dir / "classification_runtimes.png", "Classification Runtime by Model")
+    generate_classification_confusion_matrices(classification_dir)
 
 
 def run_clustering(args: argparse.Namespace, bundle) -> None:
@@ -123,6 +130,7 @@ def run_clustering(args: argparse.Namespace, bundle) -> None:
     )
     df = save_dataframe(results, clustering_dir / "clustering_summary.csv")
     plot_clustering_results(df, clustering_dir / "clustering_metrics.png")
+    plot_runtime_results(df, clustering_dir / "clustering_runtimes.png", "Clustering Runtime by Representation")
 
 
 def main() -> None:

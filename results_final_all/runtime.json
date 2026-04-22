@@ -1,0 +1,11 @@
+{
+  "device": "cuda",
+  "cuda_available": true,
+  "device_count": 1,
+  "device_name": "NVIDIA GeForce RTX 5090",
+  "bf16_supported": true,
+  "tf32_enabled": true,
+  "require_cuda": true,
+  "prefer_bf16": true,
+  "output_dir": "results_final_all"
+}

@@ -4,6 +4,8 @@ from dataclasses import dataclass
 @dataclass(slots=True)
 class RuntimeConfig:
     encoder_model_name: str = "distilbert-base-uncased"
+    encoder_head_model_name: str = "distilbert-base-uncased"
+    encoder_zeroshot_model_name: str = "sentence-transformers/all-MiniLM-L6-v2"
     decoder_model_name: str = "Qwen/Qwen2.5-0.5B-Instruct"
     encoder_batch_size: int = 16
     decoder_batch_size: int = 1

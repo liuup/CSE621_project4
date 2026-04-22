@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pandas as pd
 from sklearn.cluster import KMeans
 from sklearn.feature_extraction.text import TfidfVectorizer
 
@@ -45,6 +46,13 @@ def run_clustering_experiments(
 
         metrics = clustering_metrics(bundle.test_labels, cluster_labels, features, timing.elapsed)
         results.append({"model": f"encoder_{pooling}_kmeans", **metrics})
+        pd.DataFrame(
+            {
+                "text": bundle.test_texts,
+                "true_label": [bundle.label_names[int(label)] for label in bundle.test_labels],
+                "cluster_label": cluster_labels,
+            }
+        ).to_csv(Path(output_dir) / f"encoder_{pooling}_clusters.csv", index=False)
         plot_cluster_projection(
             features,
             bundle.test_labels,
@@ -60,6 +68,13 @@ def run_clustering_experiments(
 
     metrics = clustering_metrics(bundle.test_labels, cluster_labels, features, timing.elapsed)
     results.append({"model": "classical_tfidf_kmeans", **metrics})
+    pd.DataFrame(
+        {
+            "text": bundle.test_texts,
+            "true_label": [bundle.label_names[int(label)] for label in bundle.test_labels],
+            "cluster_label": cluster_labels,
+        }
+    ).to_csv(Path(output_dir) / "classical_tfidf_clusters.csv", index=False)
     plot_cluster_projection(
         features,
         bundle.test_labels,
